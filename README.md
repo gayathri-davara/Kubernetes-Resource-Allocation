@@ -1,218 +1,300 @@
-\# Kubernetes Resource Allocation, Scheduling and Load Balancing
+# Kubernetes Resource Allocation, Pod Scheduling, Scaling & Load Balancing
 
+## Overview
 
+This experiment demonstrates Kubernetes resource management and traffic distribution using a three-node Kubernetes cluster created with **KIND (Kubernetes in Docker)**.
 
-\## Overview
+An NGINX application was deployed across two worker nodes to study resource allocation, pod scheduling, horizontal scaling, service discovery, and load balancing.
 
+CPU and memory requests and limits were configured for application pods. The deployment was initially created with six replicas and subsequently scaled to twelve replicas. A Kubernetes NodePort Service was configured to expose the application internally through a stable service endpoint.
 
+A traffic distribution experiment was performed using a temporary BusyBox client, which generated 30 HTTP requests to the Kubernetes Service. Responses from all twelve backend pods were observed.
 
-This experiment analyzes resource allocation, pod scheduling, horizontal scaling, service discovery, and traffic distribution in a three-node Kubernetes cluster using KIND.
+## Objectives
 
+- Create and inspect a three-node Kubernetes cluster using KIND.
+- Monitor CPU and memory utilization of cluster nodes.
+- Configure CPU and memory requests and limits for application containers.
+- Understand Kubernetes pod scheduling and resource allocation.
+- Deploy an NGINX application using Kubernetes Deployments.
+- Scale the application from 6 to 12 replicas.
+- Examine pod distribution across worker nodes.
+- Analyze resource allocation using Kubernetes node descriptions.
+- Configure a NodePort Service for application access.
+- Inspect Service endpoints and EndpointSlices.
+- Demonstrate traffic distribution across multiple backend pods.
 
+## Technology Stack
 
-The application uses NGINX containers deployed across two worker nodes. Kubernetes resource requests and limits are configured to observe how workloads are scheduled and managed.
+| Component | Technology |
+|---|---|
+| Container orchestration | Kubernetes |
+| Cluster environment | KIND |
+| Container runtime | containerd |
+| Application server | NGINX |
+| Monitoring | Metrics Server |
+| Test client | BusyBox |
+| Command-line interface | kubectl |
+| Service type | NodePort |
 
+## System Architecture
 
+The experiment uses a three-node Kubernetes cluster consisting of one control-plane node and two worker nodes.
 
-\## Objectives
+**Cluster configuration:**
 
+- 1 Control Plane Node
+- 2 Worker Nodes
+- 12 NGINX Application Pods
+- 1 Kubernetes NodePort Service
+- 1 Temporary BusyBox Client Pod
+- Metrics Server for resource monitoring
 
+### Architecture Diagram
 
-\- Inspect the nodes in a three-node Kubernetes cluster.
+```text
+                 Kubernetes Cluster (KIND)
+                            |
+                  +-------------------+
+                  |   Control Plane   |
+                  |    Scheduling     |
+                  |   Management      |
+                  +-------------------+
+                            |
+              +-------------+-------------+
+              |                           |
+       +-------------+             +-------------+
+       |  Worker 1   |             |  Worker 2   |
+       |             |             |             |
+       | 6 NGINX     |             | 6 NGINX     |
+       | Pods        |             | Pods        |
+       +-------------+             +-------------+
+              |                           |
+              +-------------+-------------+
+                            |
+                   nginx-service
+                     NodePort
+                      30080
+                            |
+                    BusyBox Client
+                            |
+                    HTTP Requests
+                            |
+                 Backend Pod Responses
+```
 
-\- Monitor CPU and memory utilization.
+## Resource Allocation Configuration
 
-\- Configure CPU and memory requests and limits.
-
-\- Analyze pod scheduling across worker nodes.
-
-\- Scale an application from 6 to 12 replicas.
-
-\- Configure a Kubernetes NodePort Service.
-
-\- Verify service endpoints and EndpointSlices.
-
-\- Demonstrate traffic distribution across multiple backend pods.
-
-
-
-\## Architecture
-
-
-
-\- \*\*Cluster:\*\* KIND
-
-\- \*\*Nodes:\*\* 1 control-plane and 2 worker nodes
-
-\- \*\*Container runtime:\*\* containerd
-
-\- \*\*Application:\*\* NGINX
-
-\- \*\*Monitoring:\*\* Metrics Server
-
-\- \*\*Client:\*\* BusyBox
-
-\- \*\*Orchestration:\*\* Kubernetes
-
-
-
-\## Resource Configuration
-
-
-
-Each NGINX pod was configured with:
-
-
+Each NGINX container was configured with the following CPU and memory requests and limits.
 
 | Resource | Request | Limit |
-
 |---|---:|---:|
-
 | CPU | 100m | 200m |
-
 | Memory | 64Mi | 128Mi |
 
+**Understanding resource requests and limits:**
 
+- **CPU Request:** The amount of CPU allocated for scheduling calculations.
+- **CPU Limit:** The maximum CPU usage permitted for the container.
+- **Memory Request:** The amount of memory considered during pod scheduling.
+- **Memory Limit:** The maximum memory the container can use before it may be terminated due to an out-of-memory condition.
 
-The deployment was initially created with 6 replicas and subsequently scaled to 12 replicas.
+The deployment was initially configured with 6 replicas and later scaled to 12 replicas.
 
+## Experimental Workflow
 
+### 1. Cluster Inspection
 
-\## Experiment Workflow
+Inspected the Kubernetes cluster and verified the status of all three nodes.
 
+```bash
+kubectl get nodes -o wide
+```
 
+All three nodes reached the `Ready` state.
 
-1\. Inspected cluster nodes using `kubectl get nodes -o wide`.
+### 2. Resource Monitoring
 
-2\. Installed Metrics Server and monitored node utilization using `kubectl top nodes`.
+Installed Metrics Server and monitored CPU and memory utilization.
 
-3\. Created an NGINX Deployment with CPU and memory requests and limits.
+```bash
+kubectl top nodes
+```
 
-4\. Inspected pod status, scheduling, and node distribution.
+This provided an overview of resource consumption across the cluster nodes.
 
-5\. Scaled the deployment from 6 to 12 replicas.
+### 3. Deployment Creation
 
-6\. Analyzed allocated resources using `kubectl describe nodes`.
+Created an NGINX Deployment with CPU and memory requests and limits.
 
-7\. Created a NodePort Service named `nginx-service` on port `30080`.
+The initial deployment contained six replicas.
 
-8\. Verified service endpoints and EndpointSlices.
+### 4. Pod Scheduling Analysis
 
-9\. Tested application access using Kubernetes port-forwarding.
+Inspected the status and placement of application pods.
 
-10\. Assigned unique responses to all 12 NGINX pods.
+```bash
+kubectl get pods -o wide
+```
 
-11\. Created a temporary BusyBox client and sent 30 HTTP requests through the Kubernetes Service.
+Verified that Kubernetes scheduled the application pods across the two worker nodes.
 
-12\. Observed responses from all 12 backend pods.
+### 5. Horizontal Scaling
 
-13\. Deleted the experiment resources after verification.
+Scaled the NGINX deployment from six to twelve replicas.
 
+```bash
+kubectl scale deployment resource-demo --replicas=12
+```
 
+Verified the updated replica count.
 
-\## Load Balancing Demonstration
+```bash
+kubectl get deployments
+kubectl get pods -o wide
+```
 
+### 6. Resource Allocation Analysis
 
+Inspected node-level resource allocation.
 
-To demonstrate traffic distribution, each NGINX pod was configured to return its own pod name.
+```bash
+kubectl describe nodes
+```
 
+Analyzed CPU and memory requests and limits associated with scheduled workloads.
 
+### 7. Service Configuration
 
-A temporary BusyBox client sent 30 HTTP requests to:
+Created a Kubernetes NodePort Service named `nginx-service` using port `30080`.
 
+The Service provided a stable endpoint for accessing the NGINX backend pods.
 
+### 8. Endpoint Verification
 
-`http://nginx-service`
+Verified the Service endpoints and EndpointSlices.
 
+```bash
+kubectl get endpoints nginx-service
+kubectl get endpointslices
+```
 
+Confirmed that the Service discovered all twelve application pods as backend endpoints.
 
-The responses contained the names of all 12 backend pods.
+### 9. Application Access Verification
 
+Tested application accessibility using Kubernetes port-forwarding.
 
+This verified that the NGINX application was responding successfully.
 
-\*\*Result:\*\* All 12 backend pods were observed serving requests through the Kubernetes Service.
+### 10. Backend Identification
 
+Configured each NGINX pod to return its own pod name in the HTTP response.
 
+This made it possible to identify which backend pod handled each request.
 
-This demonstrates traffic distribution across multiple service endpoints. It does not imply perfectly equal traffic distribution.
+### 11. Load Balancing Test
 
+Created a temporary BusyBox client pod and sent 30 HTTP requests to the Kubernetes Service.
 
+```text
+http://nginx-service
+```
 
-\## Observations
+The responses were examined to identify the backend pods serving the requests.
 
+Responses from all twelve backend pods were observed.
 
+### 12. Resource Cleanup
 
-\- All three cluster nodes reached the Ready state.
-
-\- The 12 application pods were distributed evenly: 6 on each worker node.
-
-\- All 12 pods reached Running and Ready status.
-
-\- CPU and memory resource requests and limits were successfully configured.
-
-\- The Service discovered all 12 application endpoints.
-
-\- Repeated HTTP requests through the Service produced responses from all 12 backend pods.
-
-\- Application access through port-forwarding was successful.
-
-
-
-\## Screenshots
-
-
-
-| Screenshot | Description |
-
-|---|---|
-
-| 01-cluster-nodes.png | Three-node cluster |
-
-| 02-node-metrics.png | CPU and memory monitoring |
-
-| 03-deployment-config.png | Deployment YAML |
-
-| 04-initial-deployment.png | Initial 6 replicas |
-
-| 05-scaled-deployment.png | Scaled 12 replicas |
-
-| 06-pod-distribution.png | Pod distribution |
-
-| 07a-control-plane-allocation.png | Control-plane allocation |
-
-| 07b-worker-allocation.png | Worker 1 allocation |
-
-| 07c-worker2-allocation.png | Worker 2 allocation |
-
-| 08-pod-resource-details.png | Individual pod resource configuration |
-
-| 09-load-balancing-test.png | Traffic distribution test |
-
-
-
-\## Cleanup
-
-
-
-The following experiment resources were deleted:
-
-
-
-\- `lb-test` temporary client pod
-
-\- `nginx-service` NodePort Service
-
-\- `resource-demo` Deployment
-
-
+After completing the experiment, deleted the temporary client pod, NodePort Service, and NGINX Deployment.
 
 The pre-existing `web` Deployment was preserved.
 
+## Load Balancing Demonstration
 
+The load balancing experiment was performed to observe how Kubernetes distributes incoming requests across multiple backend pods.
 
-\## Conclusion
+Each NGINX pod was configured to return a unique response containing its pod name.
 
+A temporary BusyBox client generated 30 HTTP requests to the `nginx-service` Service.
 
+**Test Configuration:**
 
-The experiment demonstrated Kubernetes resource monitoring, resource allocation, workload scheduling, horizontal scaling, service discovery, and traffic distribution across multiple backend pods in a three-node KIND cluster.
+| Parameter | Value |
+|---|---|
+| Kubernetes Service | nginx-service |
+| Service Type | NodePort |
+| NodePort | 30080 |
+| Backend Replicas | 12 |
+| HTTP Requests | 30 |
+| Test Client | BusyBox |
 
+**Observed Result:**
+
+Responses containing the names of all twelve backend pods were observed during the test.
+
+This confirms that requests were successfully routed to multiple backend endpoints through the Kubernetes Service.
+
+*Note: The experiment demonstrates backend participation, not perfectly equal traffic distribution. Kubernetes Service routing does not guarantee an equal number of requests to every pod.*
+
+## Experimental Observations
+
+| No. | Observation | Result |
+|---|---|---|
+| 1 | Three-node cluster creation | Successful |
+| 2 | Node readiness verification | All nodes Ready |
+| 3 | CPU and memory monitoring | Successful |
+| 4 | Resource requests and limits | Configured |
+| 5 | Initial deployment | 6 replicas |
+| 6 | Horizontal scaling | 12 replicas |
+| 7 | Pod scheduling | 6 pods on each worker |
+| 8 | Pod readiness | All 12 pods Running and Ready |
+| 9 | Service discovery | 12 endpoints discovered |
+| 10 | Application accessibility | Successful |
+| 11 | Load balancing test | All 12 backend pods observed |
+| 12 | Resource cleanup | Completed |
+
+## Screenshots
+
+The following screenshots document the experiment execution and its results.
+
+| Screenshot | Description |
+|---|---|
+| `01-cluster-nodes.png` | Three-node KIND cluster |
+| `02-node-metrics.png` | CPU and memory monitoring |
+| `03-deployment-config.png` | NGINX Deployment configuration |
+| `04-initial-deployment.png` | Initial deployment with 6 replicas |
+| `05-scaled-deployment.png` | Deployment scaled to 12 replicas |
+| `06-pod-distribution.png` | Pod distribution across worker nodes |
+| `07a-control-plane-allocation.png` | Control-plane resource allocation |
+| `07b-worker-allocation.png` | Worker 1 resource allocation |
+| `07c-worker2-allocation.png` | Worker 2 resource allocation |
+| `08-pod-resource-details.png` | Individual pod resource configuration |
+| `09-load-balancing-test.png` | HTTP traffic distribution test |
+
+## Cleanup
+
+The experiment resources were deleted after successful verification.
+
+**Resources removed:**
+
+- `lb-test` – Temporary BusyBox client pod.
+- `nginx-service` – NodePort Service.
+- `resource-demo` – NGINX Deployment.
+
+**Preserved resource:**
+
+- `web` – Pre-existing Deployment.
+
+## Conclusion
+
+This experiment successfully demonstrated Kubernetes resource allocation, pod scheduling, horizontal scaling, service discovery, and load balancing using a three-node KIND cluster.
+
+The NGINX application was deployed with CPU and memory requests and limits, initially using six replicas and subsequently scaled to twelve replicas.
+
+The twelve application pods were distributed evenly across the two worker nodes, with six pods on each node. Resource utilization and allocation were inspected using Metrics Server and Kubernetes commands.
+
+A NodePort Service was configured to expose the application, and all twelve backend endpoints were successfully discovered. The load balancing experiment, performed using a temporary BusyBox client, demonstrated that HTTP requests were served by multiple backend pods, with all twelve observed during testing.
+
+Overall, the experiment provided practical understanding of Kubernetes workload management, resource allocation, scheduling, horizontal scaling, service discovery, and traffic distribution.
